@@ -1,35 +1,64 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
+
+const { connectMongo, isMongoAvailable } = require("./db/mongo");
+const { connectSQLite } = require("./db/sqlite");
+const { startSyncPipeline, runSyncPipeline } = require("./services/syncService");
+
+const faqRoutes = require("./routes/faqRoutes");
+const queryRoutes = require("./routes/queryRoutes");
+const searchRoutes = require("./routes/searchRoutes");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-let questions = [
-  {
-    id: 1,
-    question: "What is IIT Ropar VLED?",
-    answer: "A virtual learning and internship initiative."
-  }
-];
-
-app.get("/questions", (req, res) => {
-  res.json(questions);
+app.get("/", (req, res) => {
+  res.json({
+    message: "Crowdsourced FAQ backend is running",
+    stack: "MERN",
+    primaryStore: "MongoDB",
+    fallbackStore: "SQLite",
+    mongoAvailable: isMongoAvailable(),
+    endpoints: {
+      health: "GET /health",
+      faqs: "GET /api/faqs",
+      createFaq: "POST /api/faqs",
+      queries: "GET /api/queries",
+      submitQuery: "POST /api/queries",
+      resolveQuery: "PATCH /api/queries/:id/resolve",
+      search: "POST /api/search"
+    }
+  });
 });
 
-app.post("/questions", (req, res) => {
-  const newQuestion = {
-    id: questions.length + 1,
-    question: req.body.question,
-    answer: req.body.answer || ""
-  };
-
-  questions.push(newQuestion);
-
-  res.json(newQuestion);
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    mongoAvailable: isMongoAvailable(),
+    fallback: "sqlite"
+  });
 });
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
+app.use("/api/faqs", faqRoutes);
+app.use("/api/queries", queryRoutes);
+app.use("/api/search", searchRoutes);
+
+async function bootstrap() {
+  await connectSQLite();
+  await connectMongo();
+
+  await runSyncPipeline();
+  startSyncPipeline();
+
+  const PORT = process.env.PORT || 5000;
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+bootstrap();
