@@ -28,11 +28,7 @@
 :root,
 [data-theme="light"] {
   --bg-page:        #f5f4f0;
-<<<<<<< Updated upstream
-  --bg-sidebar:     #1a1a1a;
-=======
   --bg-sidebar:     #f5f4f0;
->>>>>>> Stashed changes
   --bg-white:       #ffffff;
   --bg-cta:         #ffffff;
   --bg-input:       #ffffff;
@@ -109,13 +105,8 @@
 
 /* ── DARK THEME ── */
 [data-theme="dark"] {
-<<<<<<< Updated upstream
-  --bg-page:        #1a1a1a;
-  --bg-sidebar:     #0d0d0d;
-=======
   --bg-page:        #18181b;
   --bg-sidebar:     #18181b;
->>>>>>> Stashed changes
   --bg-white:       #242424;
   --bg-cta:         #000000;
   --bg-input:       #2a2a2a;
