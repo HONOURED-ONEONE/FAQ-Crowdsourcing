@@ -1,9 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFAQ } from "../context/FAQContext";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
-feature/follow-button
-import { useState, useEffect, useRef } from "react";
 
 import ProfileDropdown from "./ProfileDropdown";
 import { useAuth } from "../context/AuthContext";
@@ -68,7 +66,6 @@ function ThemeToggle() {
     </button>
   );
 }
-main
 
 function Topbar({ openModal }) {
   const { searchQuery, setSearchQuery } = useFAQ();
@@ -141,7 +138,6 @@ function Topbar({ openModal }) {
       </div>
 
       <div className="topbar-actions">
- feature/follow-button
         <div style={{ position: "relative" }} ref={dropdownRef}>
           <button className="notif-btn" onClick={handleNotifClick}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -179,7 +175,6 @@ function Topbar({ openModal }) {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span className="notif-dot"></span>
         </button>
- main
 
         <button className="ask-btn" onClick={openModal}>
           + Ask Question
