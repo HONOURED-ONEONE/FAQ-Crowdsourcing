@@ -118,3 +118,32 @@ export async function fetchLeaderboard() {
 export async function fetchMe() {
   return request("/users/me");
 }
+
+export async function generateSummaryApi(payload) {
+  return request("/summary", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function checkDuplicates(payload) {
+  return request("/duplicates", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createPeerAnswer(payload) {
+  return request("/peer-answers", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchPeerAnswers(faqId) {
+  return request(`/peer-answers/${faqId}`);
+}
+
+export async function fetchRecommendations(limit = 10) {
+  return request(`/recommendations?limit=${limit}`);
+}

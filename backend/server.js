@@ -18,6 +18,8 @@ const bookmarkRoutes = require("./routes/bookmarkRoutes");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const { optionalAuth } = require("./middleware/auth");
+const peerAnswerRoutes = require("./routes/peerAnswerRoutes");
+const recommendationRoutes = require("./routes/recommendationRoutes");
 
 const app = express();
 
@@ -61,6 +63,8 @@ app.use("/api/answers", answerRoutes);
 app.use("/api/votes", voteRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/peer-answers", peerAnswerRoutes);
+app.use("/api/recommendations", recommendationRoutes);
 app.use("/api", aiRoutes);
 
 async function bootstrap() {
