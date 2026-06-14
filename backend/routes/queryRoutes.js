@@ -8,8 +8,11 @@ const { runSyncPipeline } = require("../services/syncService");
 const { trackEvent } = require("../services/eventService");
 
 router.post("/", async (req, res) => {
+  console.log("POST /queries HIT");
   try {
-    const { question, answer } = req.body;
+    const { question, answer, description } = req.body;
+
+    console.log("BODY:", req.body);
 
     if (!question || question.trim() === "") {
       return res.status(400).json({
@@ -32,10 +35,12 @@ router.post("/", async (req, res) => {
     if (isMongoAvailable()) {
       const query = await UserQuery.create({
         question: question.trim(),
+        description: description ? description.trim() : "",
         answer: answer ? answer.trim() : "",
         status: answer ? "resolved" : "pending",
         source: "frontend"
       });
+      console.log("Saved Mongo Query:", query._id);
 
       await trackEvent({
         type: answer ? "faq_created" : "question_created",

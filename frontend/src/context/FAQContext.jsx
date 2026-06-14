@@ -3,6 +3,7 @@ import { useAuth } from "./AuthContext";
 import {
   fetchFaqs,
   submitQuery,
+  fetchQueries,
   submitAnswer,
   toggleVote,
   toggleBookmarkApi
@@ -237,10 +238,12 @@ function mapBackendFaqToQuestion(faq) {
     title: faq.question,
     category: faq.category || "General",
     excerpt:
-      faq.answer && faq.answer.length > 120
-        ? `${faq.answer.substring(0, 120)}...`
-        : faq.answer || "",
-    description: faq.answer || "",
+    faq.description && faq.description.length > 120
+    ? `${faq.description.substring(0, 120)}...`
+    : faq.description || "",
+    
+    description: faq.description || "",
+    
     hashtags: Array.isArray(faq.keywords)
       ? faq.keywords
       : typeof faq.keywords === "string"
@@ -288,7 +291,7 @@ export function FAQProvider({ children }) {
       try {
         setLoadingQuestions(true);
 
-        const response = await fetchFaqs();
+        const response = await fetchQueries();
         const backendFaqs = response.data || [];
 
         if (backendFaqs.length > 0) {
