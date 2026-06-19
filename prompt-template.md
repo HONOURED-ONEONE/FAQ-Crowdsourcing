@@ -1,111 +1,167 @@
-# Prompt Template for CrowdFAQ Knowledge Platform
+# Prompt Template for CrowdFAQ Frontend Implementation Sprint
 
 _Last updated: 2026-06-19_
 
-## Project Summary
+## Purpose
 
-CrowdFAQ is a full-stack FAQ and knowledge-platform repository with:
+This prompt template governs the next CrowdFAQ frontend sprint.
 
-- React + Vite frontend
-- Express.js backend
-- MongoDB primary persistence
-- SQLite fallback persistence
-- JWT authentication
-- SQLite → MongoDB sync foundation
-- REST API and OpenAPI/Swagger documentation
-- Google Gemini-backed AI features with required test-time mocking
-- Advanced backend capabilities for moderation, duplicate detection, exports/imports, recommendations, translations, learning paths, bounties, GraphQL, notification preferences, and RAG-style chat
+The codebase already has a broad backend with many completed or partially completed capabilities. However, this sprint includes two categories of frontend work:
 
-Use this file when prompting an LLM to inspect, explain, stabilize, modify, or extend the project.
+1. **Frontend integrations for backend-complete features**
+   - These may call existing backend APIs.
+   - They may update `frontend/src/api/faqApi.js`.
+   - They may require OpenAPI/documentation updates if the API contract is clarified.
 
----
+2. **Upcoming frontend-only features**
+   - These must be implemented as UI-only prototypes unless the user explicitly authorizes backend/database work.
+   - No backend routes, database tables, migrations, models, or persistence changes should be added for these items yet.
+   - Use local component state, mock data, static data, or existing frontend context only.
 
-## Canonical Documentation Files
+The primary design and styling guide for all frontend implementation is:
 
-Use these files as the current documentation set:
+```text
+frontend-sample.txt
+```
 
-1. `architecture.md`
-2. `missing-features-roadmap.md`
-3. `prompt-template.md`
-4. `backend/openapi.yaml`
-5. `backend/tests/universal.postmerge.diagnostic.test.js`
-
-Filenames have been standardized to prevent documentation naming drift.
+Before implementing any frontend UI, retrieve and inspect `frontend-sample.txt`. If `frontend-sample.txt` is unavailable, pause and ask the user to provide it. Do not invent a visual style from scratch when this file is required.
 
 ---
 
-## Mandatory Workflow for LLMs
+## Mandatory Pause Rule
 
-Before roadmap-related implementation or stabilization:
+Before implementing any specific feature from this roadmap, the LLM must pause and await direct user input selecting the exact feature or task to implement.
 
-1. Read `missing-features-roadmap.md`.
-2. Read `architecture.md`.
-3. Read this `prompt-template.md`.
-4. Inspect the exact backend/frontend files involved.
-5. Inspect `backend/openapi.yaml` if public routes are involved.
-6. Inspect or update `backend/tests/universal.postmerge.diagnostic.test.js` if backend behavior changes.
+Do **not** automatically implement the next item in the roadmap.
+Do **not** implement multiple features unless the user explicitly asks for multiple features.
+Do **not** convert frontend-only features into backend/database features unless the user explicitly authorizes backend/database integration.
 
-Do not guess the current implementation state. If required documentation is missing, ask for it.
+When the user asks generally to “continue,” “start,” “proceed,” or “work on the roadmap,” respond by asking which specific feature should be implemented first.
 
----
+Recommended clarification prompt:
 
-## Current Codebase Reality
-
-The backend is broad and ahead of the frontend. Many advanced features are represented in backend routes, models, SQLite schema, services, and tests. Several of those features still need frontend wiring, contract cleanup, OpenAPI expansion, or stabilization.
-
-Therefore, do not assume that a feature listed in an older roadmap as “missing” is still missing. Verify from:
-
-- `backend/server.js`
-- `backend/routes/`
-- `backend/services/`
-- `backend/models/`
-- `backend/db/sqlite.js`
-- `backend/db/migrations/`
-- `frontend/src/api/faqApi.js`
-- relevant frontend pages/components
-- tests
+```text
+Which exact frontend item should I implement first from missing-features-roadmap.md? I will keep frontend-only items UI-only unless you explicitly approve backend/database integration.
+```
 
 ---
 
-## Implementation Rule
+## Canonical Files to Read First
 
-When asked to implement or fix something:
+Before any implementation, inspect:
 
-1. Identify the exact roadmap item or stabilization issue.
-2. Confirm its current state:
-   - Fully complete
-   - Backend complete / frontend pending
-   - Stabilization required
-   - Missing/deferred
-3. Implement only the scoped item.
-4. Preserve MongoDB/SQLite parity.
-5. Preserve existing core behavior.
-6. Add or update tests.
-7. Update documentation.
-8. Update OpenAPI if public routes changed.
-9. Run or maintain the universal post-merge diagnostic test.
+1. `frontend-sample.txt` — primary frontend design/styling guide
+2. `missing-features-roadmap.md` — sprint tracker and implementation scope
+3. `architecture.md` — current system architecture
+4. `prompt-template.md` — current workflow rules
+5. `frontend/src/api/faqApi.js` — API helper layer
+6. Relevant frontend page/component files
+7. Relevant backend route files only if the selected item is backend-integrated
+8. `backend/openapi.yaml` only if public API usage or documentation is affected
+9. `backend/tests/universal.postmerge.diagnostic.test.js` if backend behavior changes
 
-Do not implement unrelated roadmap items opportunistically.
+If `frontend-sample.txt` is missing, stop and ask for it.
 
 ---
 
-## Documentation Update Rule
+## Frontend-Sample Design Rule
 
-After any feature or stabilization change, update:
+All UI implementation must follow `frontend-sample.txt` as the primary design/styling guide.
 
-- `missing-features-roadmap.md`
-- `architecture.md`
-- `backend/openapi.yaml`, if API routes changed
-- `backend/tests/universal.postmerge.diagnostic.test.js`, if behavior changed
-- `prompt-template.md`, only if workflow guidance or architecture conventions changed
+Use `frontend-sample.txt` to determine:
+
+- layout density,
+- card structure,
+- typography hierarchy,
+- button styles,
+- empty/loading/error states,
+- dark/light theme behavior,
+- spacing scale,
+- badges/chips/tabs styling,
+- dashboard/admin layout patterns,
+- responsive behavior,
+- micro-interactions and visual polish.
+
+Do not introduce an unrelated visual system. If an existing component conflicts with `frontend-sample.txt`, preserve app functionality but align new UI patterns with `frontend-sample.txt` where practical.
 
 ---
 
-## Response Contract Rule
+## Scope Categories
 
-Use this policy when editing backend routes.
+## A. Backend-Integrated Frontend Features
 
-### Normal JSON Success
+These features may use existing backend routes and API helpers:
+
+1. Contributor leaderboard API integration
+2. Export options
+3. Import option with AI-powered cleanup of import
+4. Translation controls
+5. Bounty UI with reputation link
+6. Learning paths
+7. Notification preferences persistence, if existing backend endpoints are used
+8. Revision history/rollback UI, if existing backend endpoints are used
+9. Admin needs-update queue, if existing backend endpoints are used
+
+For these features:
+
+- Verify the backend route exists.
+- Add/update API helper in `frontend/src/api/faqApi.js`.
+- Wire UI to backend data.
+- Add loading/empty/error states.
+- Update `missing-features-roadmap.md` and `architecture.md`.
+- Update `backend/openapi.yaml` if route documentation is missing or clarified.
+
+## B. Frontend-Only Features — No Backend or Database Integration Yet
+
+These features must remain frontend-only until the user explicitly approves backend/database work:
+
+1. Edit UI for FAQ, Query, and Answers
+2. Whole moderation dashboard and controls prototype
+3. Advanced search UI controls
+4. Related questions sidebar
+5. Separate FAQ vs Questions section
+6. Badges/milestone progress bar based on reputation increments
+7. Notifications UI improvement
+8. Subscription thread controls and search filters
+9. Profile page activity visualization
+10. Verified badges on answers from users classified as experts
+11. Notification filters: new, old, answers only, questions followed, flags/warnings
+12. Translation UI per answer or per question as frontend-only prototype, if not wired to backend
+
+For frontend-only features:
+
+- Do not create backend routes.
+- Do not create database schema/migrations.
+- Do not create or modify Mongoose models.
+- Do not change sync logic.
+- Do not change authorization middleware.
+- Use mock/local/static/frontend-context data.
+- Clearly label mock-only behavior in code comments or roadmap evidence.
+- Add TODO notes for future backend integration only if helpful.
+
+---
+
+## Implementation Workflow
+
+After the user selects a specific feature:
+
+1. Confirm whether it is backend-integrated or frontend-only.
+2. Read `frontend-sample.txt`.
+3. Inspect current relevant frontend files.
+4. Plan the minimal set of frontend changes.
+5. Implement only that feature.
+6. Preserve existing UX and routing unless the selected feature requires changes.
+7. Add loading/error/empty states where relevant.
+8. Add role-gated UI only if the current auth context supports it.
+9. Update `missing-features-roadmap.md` with status/evidence.
+10. Update `architecture.md` if app structure or feature status changes.
+11. Do not mark a feature fully complete unless its stated scope is complete.
+
+---
+
+## Backend Contract Rule for Integrated Features
+
+When using existing backend APIs, expect standard JSON routes to return:
 
 ```json
 {
@@ -116,7 +172,7 @@ Use this policy when editing backend routes.
 }
 ```
 
-### Standard JSON Error
+Errors should return:
 
 ```json
 {
@@ -126,164 +182,190 @@ Use this policy when editing backend routes.
 }
 ```
 
-### Download/Export Exceptions
-
-Export routes may return raw content if they set suitable headers:
+Export/download routes may return raw content or blobs with headers such as:
 
 - `Content-Type`
 - `Content-Disposition`
 
-Document these exceptions in OpenAPI and tests.
+Do not parse raw export responses as normal JSON envelopes.
 
 ---
 
-## Storage Parity Rule
+## Feature-Specific Guidance
 
-For persisted features:
+## 1. Edit Feature for FAQ, Query, Answers
 
-1. Add/update MongoDB model fields.
-2. Add/update SQLite schema through additive migration.
-3. Implement MongoDB and SQLite read/write paths.
-4. Consider sync behavior.
-5. Add tests runnable without MongoDB.
+Default scope: **Frontend-only prototype**.
 
-Never add a MongoDB-only persisted feature unless explicitly marked as intentionally deferred.
+Build edit buttons, edit states, inline forms, validation hints, cancel/save UI, and optimistic local updates. Do not add backend update endpoints unless directly requested.
+
+## 2. Moderation Dashboard and Controls
+
+Default scope: **Frontend-only prototype unless backend moderation routes are explicitly selected**.
+
+Design pending content review interface, flagging controls, approve/reject/escalate actions, confidence badges, reason panels, and queue tabs. If backend routes already exist and the user asks for integration, wire to them; otherwise use mock data.
+
+## 3. Advanced Search UI
+
+Default scope: **Frontend-only UI controls**.
+
+Add category filters, tag filters, sort by newest, sort by votes, and clear filters. Apply filtering client-side unless backend search integration is explicitly requested.
+
+## 4. Related Questions Sidebar
+
+Default scope: **Frontend-only prototype**.
+
+Show related questions based on category/tags/current question context using existing in-memory questions or mock data.
+
+## 5. Separate FAQ vs Questions Section
+
+Default scope: **Frontend-only navigation/layout change**.
+
+Separate resolved FAQ knowledge entries from open/pending community questions in tabs or separate sections.
+
+## 6. Badges/Milestone Progress Meter
+
+Default scope: **Frontend-only visualization**.
+
+Display reputation-based progress bars/meters and next milestone. Use current user reputation from auth/profile context if available; otherwise mock locally.
+
+## 7. Notifications Improvement
+
+Default scope: **Frontend-only UI improvement**.
+
+Improve notification cards, grouping, read/unread display, priority labels, empty states, and toast feedback. Do not add backend preference changes unless selected.
+
+## 8. Subscription Thread Controls + Search Filters
+
+Default scope: **Frontend-only controls**.
+
+Add search/filter controls for followed threads/tags/topics. Use existing subscription data or mock data.
+
+## 9. Profile Page Activity Visualization
+
+Default scope: **Frontend-only visualization**.
+
+Add charts, timeline, heatmap, streak-like displays, or activity cards using existing profile/activity data or mock data.
+
+## 10. Verified Badges for Expert Answers
+
+Default scope: **Frontend-only display rule unless backend verification route is selected**.
+
+Show verified/expert badges for answers by users classified as experts. Use current role/badge data or mock expert labels.
+
+## 11. Notification Filters
+
+Default scope: **Frontend-only filter controls**.
+
+Add filters for:
+
+- new,
+- old,
+- answers only,
+- questions followed,
+- flags/warnings.
+
+Filter current notification list client-side unless backend filtering is requested.
+
+## 12. Contributor Leaderboard API Integration
+
+Default scope: **Backend-integrated frontend feature**.
+
+Use `GET /api/contributors/leaderboard` if available. Replace static contributor lists with backend data, preserving fallback data if the API fails.
+
+## 13. Export / Import with AI-Powered Cleanup
+
+Default scope: **Backend-integrated if routes exist; otherwise UI-only prototype**.
+
+Export should handle raw file downloads. Import UI may include upload area, preview, dry-run result, cleanup summary, and confirmation. Do not add backend cleanup endpoints unless requested.
+
+## 14. Translate per Answer or Question
+
+Default scope: **Backend-integrated if translation routes exist; otherwise frontend-only prototype**.
+
+Prefer per-question/per-answer controls over a global Google Translate-page style option. Keep original/translated toggle.
+
+## 15. Bounty UI — Reputation Link
+
+Default scope: **Backend-integrated if bounty routes exist**.
+
+Show reputation cost, available reputation, sponsor form, open bounty state, and award action. Do not modify backend reputation logic unless requested.
+
+## 16. Learning Paths
+
+Default scope: **Backend-integrated if learning path routes exist**.
+
+Add learning path list/detail UI and navigation. Show ordered FAQ items and link to question detail pages.
 
 ---
 
-## AI Reliability Rule
+## Required Roadmap Update Format
 
-For any Gemini/AI-backed feature:
+After implementing any selected item, update `missing-features-roadmap.md` using this structure:
 
-1. Tests must not call the real external API.
-2. Mock `@google/genai` or the service wrapper.
-3. Runtime must handle missing/invalid API keys gracefully.
-4. CRUD should not fail solely due to AI outage.
-5. Store provenance, confidence, and fallback indicators where relevant.
+```markdown
+## Feature Name
 
----
+Status: In Progress | Complete | Backend Complete / Frontend Pending | Frontend-Only Prototype Complete | Blocked
+Scope: Frontend-only | Backend-integrated
+Last Updated: YYYY-MM-DD
 
-## Frontend Integration Rule
+Files Changed:
+- `frontend/src/...`
 
-When backend routes already exist, prefer wiring the frontend before adding new backend features.
+Implementation Evidence:
+- What was added.
+- What data source is used.
+- Whether backend is integrated or mocked.
 
-Common frontend integration targets:
-
-- Verified answer badges
-- Contributor leaderboard
-- Badge/milestone profile data
-- Revision history and rollback UI
-- Export/import controls
-- Learning paths
-- Recommendations
-- Journey dashboard
-- Translation controls
-- Bounties
-- Notification preferences
-- Needs-update queue
-
----
-
-## Key Backend Files
-
-- `backend/server.js`
-- `backend/db/mongo.js`
-- `backend/db/sqlite.js`
-- `backend/db/migrations/`
-- `backend/middleware/auth.js`
-- `backend/middleware/validate.js`
-- `backend/middleware/ownership.js`
-- `backend/middleware/rateLimits.js`
-- `backend/routes/`
-- `backend/services/`
-- `backend/models/`
-- `backend/utils/apiResponse.js`
-- `backend/utils/pagination.js`
-
----
-
-## Key Frontend Files
-
-- `frontend/src/main.jsx`
-- `frontend/src/App.jsx`
-- `frontend/src/api/faqApi.js`
-- `frontend/src/context/AuthContext.jsx`
-- `frontend/src/context/FAQContext.jsx`
-- `frontend/src/context/ThemeContext.jsx`
-- `frontend/src/pages/`
-- `frontend/src/components/`
-
----
-
-## Testing Rule
-
-Backend tests use Jest and Supertest with isolated SQLite databases.
-
-When changing backend behavior, add/update tests for:
-
-- success path
-- validation failure
-- authorization failure
-- ownership failure where applicable
-- SQLite fallback behavior
-- MongoDB path if practical
-- AI fallback behavior where applicable
-- OpenAPI/contract behavior where applicable
-
-The diagnostic post-merge suite should stay green and should avoid real AI/API calls.
-
----
-
-## Recommended Prompt Patterns
-
-### Stabilize API contracts
-
-```text
-Read missing-features-roadmap.md and architecture.md. Stabilize API response contracts for auth, bookmarks, search, and export routes. Preserve backward compatibility in frontend/src/api/faqApi.js, update backend/openapi.yaml, and update universal.postmerge.diagnostic.test.js.
+Remaining Gaps:
+- Any missing tests, API docs, backend integration, or UX improvements.
 ```
 
-### Wire frontend to backend-complete feature
+---
 
-```text
-Read missing-features-roadmap.md and architecture.md. Wire the frontend Contributors page to GET /api/contributors/leaderboard. Replace static/mock ranking data, add loading/error states, update faqApi.js, and update documentation.
-```
+## Testing Expectations
 
-### Update OpenAPI
+If a frontend test framework exists, add tests for:
 
-```text
-Inspect backend/server.js and backend/routes. Expand backend/openapi.yaml so every public route is documented, including moderation, duplicate detection, chat, translations, bounties, notification preferences, revisions, export/import, recommendations, and learning paths.
-```
+- loading states,
+- empty states,
+- error states,
+- rendered API/mock data,
+- role-gated controls,
+- filter behavior,
+- modal open/close behavior,
+- optimistic UI updates,
+- export/download helper behavior.
 
-### Harden AI testing
+If no frontend testing framework is available, record the test gap in `missing-features-roadmap.md`.
 
-```text
-Inspect all services that import @google/genai. Ensure tests mock external AI calls, runtime handles invalid API keys gracefully, and universal.postmerge.diagnostic.test.js remains deterministic.
-```
+Backend diagnostic suite should remain green after any backend-integrated change:
 
-### Reconcile documentation
-
-```text
-Compare architecture.md, missing-features-roadmap.md, prompt-template.md, backend/openapi.yaml, and backend/server.js. Update the docs so feature statuses and route lists match the current codebase exactly.
+```bash
+cd backend
+npm test -- universal.postmerge.diagnostic.test.js
 ```
 
 ---
 
 ## Safe Editing Rules
 
-1. Do not remove SQLite fallback support.
-2. Do not add persisted MongoDB features without SQLite equivalents.
-3. Do not expose moderator/admin actions without `requireAuth` and `requireRole`.
-4. Do not rely on external AI calls in tests.
-5. Keep tests runnable without MongoDB.
-6. Prefer additive migrations.
-7. Keep routes thin and move reusable business logic to services.
-8. Maintain or document response-envelope exceptions.
-9. Update OpenAPI for public route changes.
-10. Update roadmap and architecture after changes.
-11. Do not mark a feature complete unless all relevant layers are complete.
+1. Always read `frontend-sample.txt` before frontend implementation.
+2. Pause and await direct user input before implementing any specific feature.
+3. Do not implement multiple roadmap items unless explicitly requested.
+4. Keep frontend-only features frontend-only.
+5. Do not add backend/database integration unless explicitly requested.
+6. Preserve SQLite fallback behavior.
+7. Preserve existing auth and role checks.
+8. Use `frontend/src/api/faqApi.js` for backend calls.
+9. Do not parse export downloads as normal JSON.
+10. Add loading, empty, error, and success states.
+11. Update `missing-features-roadmap.md` after every feature change.
+12. Update `architecture.md` when frontend routes/components or integration state changes.
 
 ---
 
 ## Final Instruction
 
-The next major phase is stabilization and frontend alignment, not backend feature expansion. Use `missing-features-roadmap.md` to resolve the final remaining issues one by one, and keep the documentation, tests, and API contracts synchronized after every change.
+This is a controlled frontend sprint. The LLM must wait for the user to choose a specific feature, then implement only that feature within the declared scope. Frontend-only items must remain UI-only prototypes until the user explicitly approves backend or database integration.

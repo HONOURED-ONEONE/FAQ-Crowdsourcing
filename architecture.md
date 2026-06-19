@@ -4,7 +4,7 @@ _Last updated: 2026-06-19_
 
 ## 1. Executive Summary
 
-CrowdFAQ is a full-stack FAQ and knowledge-platform application. The current codebase has evolved beyond the original FAQ crowdsourcing scope into a broad knowledge management platform with:
+CrowdFAQ is a full-stack FAQ and knowledge-platform application. The current iteration has evolved from a basic FAQ crowdsourcing app into a broad knowledge-management platform with:
 
 - React + Vite frontend
 - Express.js backend
@@ -17,9 +17,9 @@ CrowdFAQ is a full-stack FAQ and knowledge-platform application. The current cod
 - AI-assisted features through Google Gemini integration
 - Advanced backend modules for moderation, duplicate detection, exports/imports, recommendations, translations, learning paths, bounties, GraphQL, notification preferences, and RAG-style chat
 
-The backend is currently ahead of the frontend. Most advanced platform capabilities are represented in backend routes, services, models, and SQLite fallback schema. The frontend covers core user/admin flows and includes components for chat, notifications, profile, analytics, dashboard, categories, contributors, bookmarks, landing, and subscription flows, but several backend-complete capabilities still require UI wiring or replacement of static/mock data.
+The backend is currently ahead of the frontend. Most advanced platform capabilities are represented in backend routes, services, models, and SQLite fallback schema. The frontend covers the core product experience and several advanced UI surfaces, but some backend-complete features still need final UI wiring, while several upcoming UI enhancements are intentionally frontend-only prototypes with no backend/database integration yet.
 
-The next development phase should prioritize stabilization, documentation reconciliation, API contract consistency, and frontend integration of backend-complete features rather than adding more major backend features.
+The current engineering phase is a **controlled frontend integration and frontend-only UI sprint**. Backend feature expansion should be avoided unless explicitly requested.
 
 ---
 
@@ -27,7 +27,7 @@ The next development phase should prioritize stabilization, documentation reconc
 
 ### 2.1 Fully Implemented Core Platform Features
 
-The following features are implemented across the primary backend architecture and are represented in the current application flow:
+The current codebase supports these core platform capabilities:
 
 - Authentication: signup, login, JWT issuance, authenticated profile lookup
 - FAQ creation, listing, search, deletion authorization, and storage
@@ -44,11 +44,11 @@ The following features are implemented across the primary backend architecture a
 - SQLite schema migrations
 - SQLite → MongoDB sync foundation
 - AI-generated quick summaries
-- REST API documentation through Swagger/OpenAPI
+- REST API documentation through Swagger/OpenAPI baseline
 
 ### 2.2 Backend-Implemented Advanced Features
 
-The current backend contains routes, services, models, and/or SQLite schema for the following advanced capabilities:
+The backend contains routes, services, models, and/or SQLite schema for these advanced capabilities:
 
 - Expert answer verification fields and route support
 - Badge and milestone service foundation
@@ -76,7 +76,7 @@ The frontend includes:
 - React + Vite SPA structure
 - `AuthContext`, `FAQContext`, and `ThemeContext`
 - Landing page and app routing
-- Dashboard, Questions, Question Detail, Categories, Contributors, Bookmarks, Profile, Admin, Login, Signup, Subscription pages
+- Dashboard, Questions, Question Detail, Categories, Contributors, Bookmarks, Profile, Admin, Login, Signup, and Subscription pages
 - Chat widget component
 - Activity graph and community heatmap components
 - Notification preferences component
@@ -84,36 +84,80 @@ The frontend includes:
 - Protected route handling
 - API abstraction in `frontend/src/api/faqApi.js`
 - Local/fallback state handling for some flows
+- Responsive styling, dark/light theme support, dashboard/admin layouts, and polished landing/widget UI
 
-However, several newer backend features still require final frontend wiring or replacement of static/mock UI data.
+Several newer backend-complete features still need final frontend wiring or replacement of static/mock UI data.
 
-### 2.4 Final Remaining Issues
+### 2.4 Current Sprint Scope
 
-These are the primary remaining issues tracked in `missing-features-roadmap.md`:
+The active sprint focuses on two types of frontend work.
 
-1. Documentation/file-name alignment: standardized to `missing-features-roadmap.md`, `architecture.md`, and `prompt-template.md`.
-2. API response-contract consistency must be formalized.
-3. OpenAPI documentation must be expanded to cover all implemented routes.
-4. Frontend must be wired to backend-complete advanced features.
-5. AI-dependent services must be mocked in tests and gracefully degraded in runtime.
-6. SQLite/MongoDB schema parity should be verified continuously.
-7. Frontend testing coverage should be added.
-8. Markdown/rich formatting sanitization policy remains incomplete.
-9. Nested/threaded answers remain unsupported.
-10. Anonymous Q&A audit workflow remains incomplete.
-11. Expert/SME recommendation and smart category metrics are not fully implemented as dedicated engines.
+#### Backend-Integrated Frontend Work
+
+These features may use existing backend APIs:
+
+1. Contributor leaderboard API integration
+2. Export options
+3. Import option with AI-powered cleanup/preview
+4. Translation controls
+5. Bounty UI with reputation link
+6. Learning paths
+7. Backend-powered recommendations
+8. Notification preferences persistence
+9. Revision history and rollback UI
+10. Admin needs-update queue
+
+#### Frontend-Only UI Prototypes
+
+These features must remain UI-only unless backend/database work is explicitly approved:
+
+1. Edit UI for FAQ, Query, and Answers
+2. Whole moderation dashboard and controls prototype
+3. Advanced search UI: category filters, tag filters, sort by newest, sort by votes
+4. Related questions sidebar
+5. Separate FAQ vs Questions section
+6. Badges/milestone progress bar or meter based on reputation increments
+7. Notifications UI improvement
+8. Subscription thread controls and search filters
+9. Profile page activity visualization
+10. Verified/expert badges on answers by expert-classified users
+11. Notification filters: new, old, answers only, questions followed, flags/warnings
+12. Per-question/per-answer translation UI prototype if not using backend translation routes
+
+Frontend-only items must not add backend routes, database migrations, Mongoose models, SQLite schema changes, sync changes, or new persistence behavior.
 
 ---
 
-## 3. System Architecture
+## 3. Design and Frontend Styling Source of Truth
 
-### 3.1 Frontend Layer
+The primary frontend design and styling guide for this sprint is:
 
-#### Key Files
+```text
+frontend-sample.txt
+```
+
+Frontend implementation should use `frontend-sample.txt` for:
+
+- layout patterns
+- spacing and density
+- dashboard/admin visual structure
+- cards, chips, badges, tabs, filters, and panels
+- empty/loading/error states
+- responsive behavior
+- dark/light theme behavior
+- micro-interactions and visual polish
+
+If `frontend-sample.txt` is unavailable, frontend implementation should pause until it is provided.
+
+---
+
+## 4. Frontend Layer
+
+### 4.1 Key Files
 
 - `frontend/src/main.jsx`
   - Bootstraps React.
-  - Wraps the app with router and providers.
+  - Wraps the app with router/providers.
 
 - `frontend/src/App.jsx`
   - Defines frontend page routing.
@@ -121,8 +165,9 @@ These are the primary remaining issues tracked in `missing-features-roadmap.md`:
 
 - `frontend/src/api/faqApi.js`
   - Centralized API client.
-  - Handles backend requests and JWT headers.
-  - Should be the first frontend file updated when new backend endpoints are exposed to UI.
+  - Handles backend requests, JWT headers, retries/timeouts where implemented, and response parsing.
+  - Should be updated before wiring UI to new backend endpoints.
+  - Should separate normal JSON helpers from raw export/download helpers.
 
 - `frontend/src/context/AuthContext.jsx`
   - Handles login, signup, logout, token persistence, and profile fetch.
@@ -133,7 +178,7 @@ These are the primary remaining issues tracked in `missing-features-roadmap.md`:
 - `frontend/src/context/ThemeContext.jsx`
   - Handles frontend theme state.
 
-#### Frontend Pages
+### 4.2 Frontend Pages
 
 - `Admin.jsx`
 - `Bookmarks.jsx`
@@ -148,9 +193,20 @@ These are the primary remaining issues tracked in `missing-features-roadmap.md`:
 - `Signup.jsx`
 - `Subscription.jsx`
 
-#### Frontend Components
+Potential upcoming pages/components:
 
-Important components include:
+- `LearningPaths.jsx`
+- `LearningPathDetail.jsx`
+- `ExportPanel.jsx`
+- `ImportPanel.jsx`
+- `RevisionHistoryPanel.jsx`
+- `NeedsUpdateQueue.jsx`
+- `BountyPanel.jsx`
+- `RelatedQuestionsSidebar.jsx`
+- `ModerationDashboard.jsx`
+- `ActivityVisualization.jsx`
+
+### 4.3 Important Components
 
 - `ActivityGraph.jsx`
 - `AskQuestionModal.jsx`
@@ -168,9 +224,20 @@ Important components include:
 - `TrendingQuestions.jsx`
 - Profile components under `frontend/src/components/profile/`
 
-### 3.2 Backend Layer
+### 4.4 Frontend Integration Principles
 
-#### Main Entry Point
+- Use `faqApi.js` for all backend calls.
+- Keep mock/static data only as fallback when backend routes exist.
+- Add loading, empty, error, and success states for each API-backed feature.
+- Add role-gated controls for admin/moderator actions.
+- Keep frontend-only prototypes local-state/mock-data based until backend integration is approved.
+- Update `missing-features-roadmap.md` after each integration.
+
+---
+
+## 5. Backend Layer
+
+### 5.1 Main Entry Point
 
 - `backend/server.js`
 
@@ -186,7 +253,7 @@ Responsibilities:
 - Start sync pipeline outside test mode.
 - Export the Express app for tests.
 
-#### Registered Route Modules
+### 5.2 Registered Route Modules
 
 - `/api/faqs`
 - `/api/queries`
@@ -210,11 +277,30 @@ Responsibilities:
 - `/api/bounties`
 - `/api/summary`
 
+### 5.3 Middleware
+
+- `auth.js`
+  - `optionalAuth`
+  - `requireAuth`
+  - `requireRole`
+
+- `validate.js`
+  - Zod-backed request validation.
+
+- `ownership.js`
+  - Ownership/admin permission helpers.
+
+- `rateLimits.js`
+  - Auth, search, AI, and write rate limiters with standardized error responses.
+
+- `errorHandler.js`
+  - Route-not-found and unhandled-error envelopes.
+
 ---
 
-## 4. Data Architecture
+## 6. Data Architecture
 
-### 4.1 MongoDB Primary Store
+### 6.1 MongoDB Primary Store
 
 MongoDB is used when `isMongoAvailable()` returns true. Mongoose models exist under `backend/models/`.
 
@@ -241,7 +327,7 @@ Current model set includes:
 - `UserQuery`
 - `Vote`
 
-### 4.2 SQLite Fallback Store
+### 6.2 SQLite Fallback Store
 
 SQLite fallback is initialized in `backend/db/sqlite.js`. It creates core and advanced tables directly and then runs additive migrations under `backend/db/migrations/`.
 
@@ -270,7 +356,7 @@ Important tables include:
 - `learning_path_items`
 - `schema_migrations`
 
-### 4.3 Migration Strategy
+### 6.3 Migration Strategy
 
 Migration files:
 
@@ -291,7 +377,7 @@ Rules:
 
 ---
 
-## 5. Backend Services
+## 7. Backend Services
 
 Implemented service files include:
 
@@ -323,11 +409,9 @@ Potential future dedicated services:
 
 ---
 
-## 6. API Contract Policy
+## 8. API Contract Policy
 
-The codebase currently has some response-shape drift. The following policy should be used going forward.
-
-### 6.1 Standard Success JSON
+### 8.1 Standard Success JSON
 
 For normal API JSON routes:
 
@@ -340,7 +424,7 @@ For normal API JSON routes:
 }
 ```
 
-### 6.2 Standard Error JSON
+### 8.2 Standard Error JSON
 
 For errors:
 
@@ -352,7 +436,7 @@ For errors:
 }
 ```
 
-### 6.3 Raw Download Responses
+### 8.3 Raw Download Responses
 
 Export/download endpoints may return raw content instead of the standard envelope if they set appropriate headers such as:
 
@@ -366,19 +450,18 @@ Examples:
 - Markdown text
 - PDF stream
 
-### 6.4 Compatibility Notes
+### 8.4 Compatibility Notes
 
-Current code may still return some legacy response shapes:
+The codebase is moving toward standardized envelopes, but frontend API helpers should remain compatible with transitional shapes where needed:
 
 - Auth token/user may appear at top level or under `meta`.
 - Bookmark action may appear as `body.action` or `body.meta.action`.
-- Search payload may accept keyword-based request bodies rather than only `{ "query": "..." }`.
-
-These should be normalized over time.
+- Search payloads may support keyword-based request bodies as well as query-based shapes.
+- Export routes should be handled as raw downloads, not normal JSON envelopes.
 
 ---
 
-## 7. Testing Strategy
+## 9. Testing Strategy
 
 Backend tests use:
 
@@ -402,7 +485,7 @@ Important tests include:
 - Phase 3/4 and Phase 5/6/7 tests
 - Universal post-merge diagnostic suite
 
-The universal diagnostic suite should remain the post-merge gate and should validate:
+The universal diagnostic suite should remain the backend post-merge gate and should validate:
 
 - Health endpoint
 - SQLite schema and migrations
@@ -415,50 +498,63 @@ The universal diagnostic suite should remain the post-merge gate and should vali
 - Implemented/unimplemented roadmap endpoint stability
 - Core service determinism
 
+Frontend test coverage is still a known gap. As frontend-only and backend-integrated features are added, tests should be added for loading states, empty states, error states, role-gated controls, filters, modal/edit interactions, and API-backed rendering.
+
 ---
 
-## 8. Known Risks
+## 10. Known Risks
 
-### 8.1 Documentation Drift
+### 10.1 Frontend/Backend Alignment
 
-The codebase has evolved quickly. `architecture.md`, `prompt-template.md`, `missing-features-roadmap.md`, OpenAPI, and tests must be updated together.
+The backend has more completed capabilities than the frontend currently exposes. The current sprint is designed to close this gap.
 
-### 8.2 Dual Storage Complexity
+### 10.2 Frontend-Only Scope Creep
 
-Every persisted feature needs both MongoDB and SQLite support. Sync, schema parity, and fallback behavior must be tested continuously.
+Upcoming UI-only features must not accidentally introduce backend or database changes. Backend/database integration requires explicit user approval.
 
-### 8.3 AI Dependency
+### 10.3 Documentation Drift
+
+`architecture.md`, `prompt-template.md`, `missing-features-roadmap.md`, OpenAPI, and tests must be updated together.
+
+### 10.4 Dual Storage Complexity
+
+Every persisted backend feature needs both MongoDB and SQLite support. Sync, schema parity, and fallback behavior must be tested continuously.
+
+### 10.5 AI Dependency
 
 Gemini-backed services must degrade gracefully. Tests must mock AI calls.
 
-### 8.4 Frontend/Backend Alignment
-
-Backend capabilities are ahead of the frontend. Several routes need UI integration.
-
-### 8.5 API Envelope Drift
+### 10.6 API Envelope Drift
 
 Response shape inconsistencies must be normalized or explicitly documented.
 
 ---
 
-## 9. Stabilization Priorities
+## 11. Stabilization and Frontend Sprint Priorities
 
-1. Standardize file naming: completed (filenames are standardized to `missing-features-roadmap.md`, `architecture.md`, and `prompt-template.md`).
-2. Reconcile `architecture.md`, `prompt-template.md`, `missing-features-roadmap.md`, and `openapi.yaml`.
-3. Finalize response-contract policy and adjust backend helpers/routes.
-4. Make the diagnostic post-merge suite green and canonical.
-5. Expand OpenAPI coverage for all implemented routes.
-6. Wire frontend to backend-complete features.
-7. Add frontend tests for core user/admin flows.
-8. Add SQLite/MongoDB schema parity checks.
-9. Harden AI fallback and logging behavior.
-10. Create a release-readiness checklist.
+1. Keep `frontend-sample.txt` as the design/styling source for new frontend work.
+2. Pause before implementing any roadmap item until the user selects a specific feature.
+3. Keep frontend-only features UI-only until backend/database integration is explicitly approved.
+4. Improve `frontend/src/api/faqApi.js` compatibility and raw export handling.
+5. Wire contributor leaderboard API.
+6. Add advanced search UI, related questions sidebar, and separate FAQ vs Questions sections.
+7. Improve notification UI and filters.
+8. Wire notification preferences persistence.
+9. Add verified/expert answer badges and verified-answer controls where backend-integrated.
+10. Add export/import UI.
+11. Add translation controls.
+12. Add bounty UI.
+13. Add learning paths UI.
+14. Add revision history/rollback UI.
+15. Add admin needs-update queue UI.
+16. Add frontend tests or document test gaps.
+17. Expand OpenAPI coverage for all frontend-used backend routes.
 
 ---
 
-## 10. Development Rule
+## 12. Development Rule
 
-A feature is complete only when the following are done where applicable:
+A backend-integrated feature is complete only when the following are done where applicable:
 
 - Frontend UI or API client integration
 - Backend route/service implementation
@@ -467,7 +563,16 @@ A feature is complete only when the following are done where applicable:
 - Validation
 - Authorization
 - Event/audit tracking
-- Tests
+- Tests or documented test gap
 - OpenAPI documentation
 - `architecture.md` update
 - `missing-features-roadmap.md` update
+
+A frontend-only prototype is complete only when:
+
+- It follows `frontend-sample.txt` design guidance.
+- It does not add backend/database changes.
+- It uses mock/local/context data appropriately.
+- It has loading/empty/error states where relevant.
+- It updates `missing-features-roadmap.md` with implementation evidence.
+- It documents any future backend integration gap.
