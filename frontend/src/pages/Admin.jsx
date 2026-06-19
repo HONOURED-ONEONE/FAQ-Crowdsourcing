@@ -5,7 +5,10 @@ import {
   fetchModerationQueue,
   fetchModerationExplanation,
   actOnModeration,
-  fetchKnowledgeGaps
+  fetchKnowledgeGaps,
+  previewFaqImport,
+  confirmFaqImport,
+  downloadFaqExport
 } from "../api/faqApi";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
@@ -22,6 +25,14 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState("pdf");
+  const [exportMode, setExportMode] = useState("raw");
+  const [importFileName, setImportFileName] = useState("");
+  const [importFileContent, setImportFileContent] = useState("");
+  const [importPreview, setImportPreview] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importStatus, setImportStatus] = useState("");
+  const [importError, setImportError] = useState("");
 
   async function loadAdminData() {
     setLoading(true);
@@ -77,6 +88,93 @@ export default function Admin() {
     }
   };
 
+  const handleExport = async () => {
+    setError("");
+    try {
+      const blob = await downloadFaqExport(exportFormat, exportMode);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `faqs.${exportFormat}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message || "Export failed.");
+    }
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+    setImportPreview([]);
+    setImportStatus("");
+    setImportError("");
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      setImportFileContent(result.split(",")[1] || "");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePreviewImport = async () => {
+    if (!importFileName || !importFileContent) {
+      setImportError("Please select a PDF, DOCX, or TXT document to preview.");
+      return;
+    }
+
+    setImportLoading(true);
+    setImportError("");
+    setImportPreview([]);
+    setImportStatus("");
+
+    try {
+      const response = await previewFaqImport(importFileName, importFileContent);
+      setImportPreview(response.data || []);
+      if (!response.data || response.data.length === 0) {
+        setImportStatus("No candidate FAQs were generated from this document.");
+      }
+    } catch (err) {
+      setImportError(err.message || "Preview failed.");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview.length) {
+      setImportError("No preview items available for import confirmation.");
+      return;
+    }
+
+    setImportLoading(true);
+    setImportError("");
+    setImportStatus("");
+
+    try {
+      const response = await confirmFaqImport(importPreview.map((item) => ({
+        question: item.question,
+        answer: item.answer,
+        category: item.category,
+        tags: item.tags
+      })));
+
+      setImportStatus(`Imported ${response.data.imported.length} FAQ(s) successfully.`);
+      setImportPreview([]);
+      setImportFileName("");
+      setImportFileContent("");
+    } catch (err) {
+      setImportError(err.message || "Import confirmation failed.");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   return (
     <>
       <Sidebar />
@@ -108,7 +206,7 @@ export default function Admin() {
 
           {/* Console Sub-Tabs */}
           <div style={{ display: "flex", borderBottom: "1px solid var(--border)", gap: "16px", marginBottom: "24px" }}>
-            {["Overview", "Moderation Queue", "Knowledge Gaps"].map((tab) => (
+            {["Overview", "Import / Export", "Moderation Queue", "Knowledge Gaps"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -185,6 +283,106 @@ export default function Admin() {
                       </div>
                     )}
                   </section>
+                </div>
+              )}
+
+              {/* Tab 2: Import / Export */}
+              {activeTab === "Import / Export" && (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+                    <section style={{ padding: "20px", borderRadius: "12px", backgroundColor: "var(--surface-secondary)", border: "1px solid var(--border)" }}>
+                      <h2 style={{ margin: "0 0 16px", fontSize: "18px" }}>Export FAQs</h2>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "14px", color: "var(--text-secondary)" }}>
+                          Format
+                          <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value)} style={{ padding: "10px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                            <option value="markdown">Markdown</option>
+                            <option value="pdf">PDF</option>
+                            <option value="docx">DOCX</option>
+                          </select>
+                        </label>
+                        <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "14px", color: "var(--text-secondary)" }}>
+                          Mode
+                          <select value={exportMode} onChange={(e) => setExportMode(e.target.value)} style={{ padding: "10px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                            <option value="raw">Raw</option>
+                            <option value="ai">AI-formatted (PDF/DOCX only)</option>
+                          </select>
+                        </label>
+                        <button onClick={handleExport} style={{ padding: "12px 18px", borderRadius: "8px", backgroundColor: "var(--primary-color, #3b82f6)", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                          Download Export
+                        </button>
+                        <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "13px" }}>
+                          AI mode is only available for PDF and DOCX exports. JSON, CSV, and Markdown will always download raw exports.
+                        </p>
+                      </div>
+                    </section>
+
+                    <section style={{ padding: "20px", borderRadius: "12px", backgroundColor: "var(--surface-secondary)", border: "1px solid var(--border)" }}>
+                      <h2 style={{ margin: "0 0 16px", fontSize: "18px" }}>Import Document Preview</h2>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileChange} />
+                        <button onClick={handlePreviewImport} style={{ padding: "12px 18px", borderRadius: "8px", backgroundColor: "var(--primary-color, #3b82f6)", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                          Preview Document Import
+                        </button>
+                        {importLoading && <p style={{ margin: 0, color: "var(--text-secondary)" }}>Processing preview…</p>}
+                        {importStatus && <p style={{ margin: 0, color: "var(--text-secondary)" }}>{importStatus}</p>}
+                        {importError && <p style={{ margin: 0, color: "#ef4444" }}>{importError}</p>}
+                      </div>
+                    </section>
+                  </div>
+
+                  {importPreview.length > 0 && (
+                    <section style={{ padding: "20px", borderRadius: "12px", backgroundColor: "var(--surface-secondary)", border: "1px solid var(--border)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                        <h2 style={{ margin: 0, fontSize: "18px" }}>Previewed FAQ Candidates</h2>
+                        <button onClick={handleConfirmImport} style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#10b981", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
+                          Confirm Import
+                        </button>
+                      </div>
+                      <div style={{ display: "grid", gap: "14px" }}>
+                        {importPreview.map((item) => (
+                          <article key={item.id} style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#fff", border: "1px solid var(--border)" }}>
+                            <div style={{ marginBottom: "8px", display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                              <strong>{item.question}</strong>
+                              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{item.category || "General"}</span>
+                            </div>
+                            <p style={{ margin: 0, color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>{item.answer}</p>
+                            {item.tags && item.tags.length > 0 && (
+                              <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                                {item.tags.map((tag) => (
+                                  <span key={tag} style={{ padding: "4px 8px", borderRadius: "999px", backgroundColor: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontSize: "12px" }}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {item.validationErrors && item.validationErrors.length > 0 && (
+                              <div style={{ marginTop: "10px", color: "#b91c1c", fontSize: "13px" }}>
+                                <strong>Validation issues:</strong>
+                                <ul style={{ margin: "8px 0 0", paddingLeft: "18px" }}>
+                                  {item.validationErrors.map((err, index) => (
+                                    <li key={index}>{err}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {item.duplicateScores && item.duplicateScores.length > 0 && (
+                              <div style={{ marginTop: "10px", color: "#6b7280", fontSize: "13px" }}>
+                                <strong>Potential duplicates:</strong>
+                                <ul style={{ margin: "8px 0 0", paddingLeft: "18px" }}>
+                                  {item.duplicateScores.slice(0, 3).map((dup) => (
+                                    <li key={dup.id}>{dup.question} ({Math.round(dup.similarity * 100)}%)</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  )}
                 </div>
               )}
 

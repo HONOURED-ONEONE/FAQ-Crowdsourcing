@@ -126,6 +126,20 @@ paths:
         "200":
           description: FAQs successfully imported or dry-run validation results returned
 
+  /faqs/import/preview:
+    post:
+      summary: Preview FAQs extracted from uploaded PDF, DOCX, or TXT before import
+      responses:
+        "200":
+          description: FAQ preview items returned for confirmation
+
+  /faqs/import/confirm:
+    post:
+      summary: Confirm import of previewed FAQ items
+      responses:
+        "200":
+          description: FAQ items successfully imported into the system
+
   /faqs/generate-thread:
     post:
       summary: Automatic thread generation from base64 document upload

@@ -542,13 +542,35 @@ router.post("/:id/revisions/:revisionId/rollback", requireAuth, requireRole("mod
   }
 });
 
-const { importContent, generateThreadFromDocument } = require("../services/importService");
+const { importContent, generateFaqPreviewFromDocument, importFaqPreview, generateThreadFromDocument } = require("../services/importService");
 
 const importFaqSchema = z.object({
   body: z.object({
     format: z.enum(["json", "csv", "markdown", "md"]),
     content: z.string().min(1),
     dryRun: z.boolean().optional()
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional()
+});
+
+const documentPreviewSchema = z.object({
+  body: z.object({
+    fileName: z.string().min(1),
+    fileContent: z.string().min(1)
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional()
+});
+
+const confirmImportSchema = z.object({
+  body: z.object({
+    faqs: z.array(z.object({
+      question: z.string().trim().min(1),
+      answer: z.string().trim().min(1),
+      category: z.string().trim().optional(),
+      tags: z.array(z.string().trim().min(1)).optional()
+    })).min(1)
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional()
@@ -585,6 +607,44 @@ router.post("/import", requireAuth, writeLimiter, validate(importFaqSchema), asy
     return success(res, { data: result });
   } catch (error) {
     return fail(res, { statusCode: 500, code: "IMPORT_FAILED", message: error.message });
+  }
+});
+
+router.post("/import/preview", requireAuth, requireRole("admin"), writeLimiter, validate(documentPreviewSchema), async (req, res) => {
+  try {
+    const { fileName, fileContent } = req.body;
+    const preview = await generateFaqPreviewFromDocument({
+      fileBuffer: Buffer.from(fileContent, "base64"),
+      fileName,
+      userId: req.user.id,
+      authorName: req.user.name
+    });
+
+    return success(res, { data: preview });
+  } catch (error) {
+    return fail(res, { statusCode: 500, code: "IMPORT_PREVIEW_FAILED", message: error.message });
+  }
+});
+
+router.post("/import/confirm", requireAuth, requireRole("admin"), writeLimiter, validate(confirmImportSchema), async (req, res) => {
+  try {
+    const { faqs } = req.body;
+    const result = await importFaqPreview({
+      faqs,
+      userId: req.user.id,
+      authorName: req.user.name
+    });
+
+    if (result.status === "error") {
+      return fail(res, { statusCode: 500, code: "IMPORT_FAILED", message: result.message, details: result.errors });
+    }
+    if (result.status === "invalid") {
+      return fail(res, { statusCode: 400, code: "VALIDATION_ERROR", message: result.message, details: result.errors });
+    }
+
+    return success(res, { data: result });
+  } catch (error) {
+    return fail(res, { statusCode: 500, code: "IMPORT_CONFIRM_FAILED", message: error.message });
   }
 });
 

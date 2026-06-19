@@ -3,6 +3,8 @@ const { getSQLiteDb } = require("../db/sqlite");
 const FAQ = require("../models/FAQ");
 const Answer = require("../models/Answer");
 const PDFDocument = require("pdfkit");
+const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require("docx");
+const { formatFaqsForExport } = require("./aiService");
 
 function buildFilters(query) {
   const { category, tag, user, startDate, endDate } = query || {};
@@ -206,6 +208,162 @@ async function exportAsMarkdown(query) {
   return md;
 }
 
+function generatePdfFromStructuredExport(structuredExport, res) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50 });
+      doc.pipe(res);
+
+      doc.fontSize(22).text(structuredExport.title || "CrowdFAQ Knowledge Export", { align: "center" });
+      doc.fontSize(10).text(`Generated on: ${new Date().toISOString().split("T")[0]}`, { align: "center" });
+      doc.moveDown(2);
+
+      if (structuredExport.summary) {
+        doc.fontSize(12).fillColor("#202124").text(structuredExport.summary, { align: "left" });
+        doc.moveDown(1.5);
+      }
+
+      if (!structuredExport.sections || structuredExport.sections.length === 0) {
+        doc.fontSize(12).text("No FAQ data available for export.", { align: "center" });
+        doc.end();
+        return resolve();
+      }
+
+      doc.fontSize(16).fillColor("#1a73e8").text("Table of Contents", { underline: true });
+      doc.moveDown(0.5);
+      structuredExport.sections.forEach((section, index) => {
+        doc.fontSize(11).fillColor("#202124").text(`${index + 1}. ${section.heading}`, {
+          indent: 10
+        });
+      });
+      doc.addPage();
+
+      structuredExport.sections.forEach((section, sectionIndex) => {
+        doc.fontSize(18).fillColor("#1a73e8").text(section.heading);
+        doc.moveDown(0.5);
+
+        section.faqs.forEach((faq, faqIndex) => {
+          const headingNumber = `${sectionIndex + 1}.${faqIndex + 1}`;
+          doc.fontSize(14).fillColor("#0f172a").text(`${headingNumber} ${faq.question}`);
+          doc.moveDown(0.35);
+          doc.fontSize(10).fillColor("#475569").text(`Category: ${faq.category} | Tags: ${faq.tags.join(", ") || "None"}`);
+          doc.moveDown(0.3);
+          doc.fontSize(11).fillColor("#111827").text(faq.answer);
+          doc.moveDown(1);
+        });
+
+        if (sectionIndex < structuredExport.sections.length - 1) {
+          doc.addPage();
+        }
+      });
+
+      doc.end();
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function createDocxDocument(structuredExport) {
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          new Paragraph({
+            text: structuredExport.title || "CrowdFAQ Knowledge Export",
+            heading: HeadingLevel.TITLE,
+            spacing: { after: 300 }
+          }),
+          new Paragraph({
+            text: `Generated on: ${new Date().toISOString().split("T")[0]}`,
+            spacing: { after: 300 }
+          }),
+          ...(structuredExport.summary ? [
+            new Paragraph({ text: "Summary", heading: HeadingLevel.HEADING_2 }),
+            new Paragraph({ text: structuredExport.summary, spacing: { after: 300 } })
+          ] : []),
+          new Paragraph({ text: "Table of Contents", heading: HeadingLevel.HEADING_2 }),
+          ...structuredExport.sections.map((section, index) =>
+            new Paragraph({ text: `${index + 1}. ${section.heading}`, bullet: { level: 0 } })
+          ),
+          new Paragraph({ text: "" })
+        ]
+      }
+    ]
+  });
+
+  structuredExport.sections.forEach((section, sectionIndex) => {
+    doc.addSection({
+      properties: {},
+      children: [
+        new Paragraph({
+          text: section.heading,
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 300, after: 200 }
+        }),
+        ...section.faqs.flatMap((faq, faqIndex) => [
+          new Paragraph({
+            text: `${sectionIndex + 1}.${faqIndex + 1} ${faq.question}`,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 200, after: 100 }
+          }),
+          new Paragraph({ text: `Category: ${faq.category} | Tags: ${faq.tags.join(", ") || "None"}`, spacing: { after: 100 } }),
+          new Paragraph({ text: faq.answer, spacing: { after: 300 } })
+        ])
+      ]
+    });
+  });
+
+  return doc;
+}
+
+async function exportAsAIPDF(query, res) {
+  const filters = buildFilters(query);
+  const data = await fetchExportData(filters);
+  const structured = await formatFaqsForExport(data, { mode: "ai" });
+  await generatePdfFromStructuredExport(structured, res);
+}
+
+async function exportAsAIDOCX(query, res) {
+  const filters = buildFilters(query);
+  const data = await fetchExportData(filters);
+  const structured = await formatFaqsForExport(data, { mode: "ai" });
+  const doc = createDocxDocument(structured);
+  const buffer = await Packer.toBuffer(doc);
+  res.send(buffer);
+}
+
+async function exportAsDOCX(query, res) {
+  const filters = buildFilters(query);
+  const data = await fetchExportData(filters);
+  const structured = {
+    title: "CrowdFAQ Knowledge Export",
+    summary: `This export contains ${data.length} FAQs grouped by category.`,
+    sections: data.reduce((acc, faq) => {
+      const heading = faq.category || "General";
+      const existing = acc.find((section) => section.heading === heading);
+      const item = {
+        question: faq.question,
+        answer: faq.answer,
+        category: faq.category,
+        tags: faq.tags || []
+      };
+      if (existing) {
+        existing.faqs.push(item);
+      } else {
+        acc.push({ heading, faqs: [item] });
+      }
+      return acc;
+    }, [])
+  };
+
+  const doc = createDocxDocument(structured);
+  const buffer = await Packer.toBuffer(doc);
+  res.send(buffer);
+}
+
 function exportAsPDF(query, res) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -276,5 +434,8 @@ module.exports = {
   exportAsJSON,
   exportAsCSV,
   exportAsMarkdown,
-  exportAsPDF
+  exportAsPDF,
+  exportAsAIPDF,
+  exportAsDOCX,
+  exportAsAIDOCX
 };

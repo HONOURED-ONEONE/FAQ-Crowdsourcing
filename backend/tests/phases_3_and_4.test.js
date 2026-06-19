@@ -88,7 +88,7 @@ describe("Phases 3 and 4 Integration Tests", () => {
     test("exports FAQs in JSON format", async () => {
       const res = await request(app)
         .get("/api/export?format=json")
-        .set("Authorization", `Bearer ${userToken}`);
+        .set("Authorization", `Bearer ${adminToken}`);
       
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toContain("application/json");
@@ -101,7 +101,7 @@ describe("Phases 3 and 4 Integration Tests", () => {
     test("exports FAQs in CSV format", async () => {
       const res = await request(app)
         .get("/api/export?format=csv")
-        .set("Authorization", `Bearer ${userToken}`);
+        .set("Authorization", `Bearer ${adminToken}`);
       
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toContain("text/csv");
@@ -112,7 +112,7 @@ describe("Phases 3 and 4 Integration Tests", () => {
     test("exports FAQs in Markdown format", async () => {
       const res = await request(app)
         .get("/api/export?format=markdown")
-        .set("Authorization", `Bearer ${userToken}`);
+        .set("Authorization", `Bearer ${adminToken}`);
       
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toContain("text/markdown");
@@ -123,7 +123,7 @@ describe("Phases 3 and 4 Integration Tests", () => {
     test("exports FAQs in PDF format", async () => {
       const res = await request(app)
         .get("/api/export?format=pdf")
-        .set("Authorization", `Bearer ${userToken}`);
+        .set("Authorization", `Bearer ${adminToken}`);
       
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toContain("application/pdf");
@@ -199,6 +199,42 @@ Cypress is a next-generation front-end testing tool built for the modern web.
       expect(res.body.status).toBe("success");
       expect(res.body.data.status).toBe("success");
       expect(res.body.data.imported.length).toBe(1);
+    });
+
+    test("previews document import as admin before confirming", async () => {
+      const sampleBase64Text = Buffer.from("What is the purpose of a FAQ import?\nAnswer: To migrate curated knowledge into the system.").toString("base64");
+
+      const previewRes = await request(app)
+        .post("/api/faqs/import/preview")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          fileName: "faq-import.txt",
+          fileContent: sampleBase64Text
+        });
+
+      expect(previewRes.status).toBe(200);
+      expect(previewRes.body.status).toBe("success");
+      expect(Array.isArray(previewRes.body.data)).toBe(true);
+      expect(previewRes.body.data.length).toBeGreaterThan(0);
+      expect(previewRes.body.data[0]).toHaveProperty("question");
+      expect(previewRes.body.data[0]).toHaveProperty("answer");
+
+      const confirmRes = await request(app)
+        .post("/api/faqs/import/confirm")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          faqs: previewRes.body.data.map((item) => ({
+            question: item.question,
+            answer: item.answer,
+            category: item.category,
+            tags: item.tags
+          }))
+        });
+
+      expect(confirmRes.status).toBe(200);
+      expect(confirmRes.body.status).toBe("success");
+      expect(confirmRes.body.data.status).toBe("success");
+      expect(confirmRes.body.data.imported.length).toBeGreaterThan(0);
     });
   });
 

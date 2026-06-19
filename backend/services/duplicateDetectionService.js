@@ -24,7 +24,9 @@ function calculateJaccardSimilarity(str1, str2) {
   return intersection.size / union.size;
 }
 
-async function checkDuplicates(questionText) {
+async function checkDuplicates(questionText, options = {}) {
+  const { persist = true } = options;
+
   if (!questionText || typeof questionText !== "string") {
     return [];
   }
@@ -69,8 +71,8 @@ ${candidatesPrompt}
 Verify if any of these are duplicates. Respond with a JSON array matching the schema:
 [
   {
-    "index": 1 (corresponding to list order),
-    "similarity": number (0.0 to 1.0, where 1.0 is exact match, >0.7 is a duplicate, <0.4 is unrelated),
+    "index": 1,
+    "similarity": number,
     "explanation": "short explanation of why it is/is not a duplicate"
   }
 ]
@@ -113,39 +115,41 @@ Verify if any of these are duplicates. Respond with a JSON array matching the sc
     }
   }
 
-  // 4. Save duplicate candidates to Database
-  for (const cand of finalCandidates) {
-    let savedMongoLink = null;
-    if (isMongoAvailable()) {
-      try {
-        const link = await DuplicateLink.findOneAndUpdate(
-          { sourceId: questionText, targetId: cand.id },
-          { similarity: cand.similarity, explanation: cand.explanation, status: cand.similarity > 0.7 ? "confirmed" : "pending" },
-          { upsert: true, new: true }
-        );
-        savedMongoLink = link;
-      } catch (err) {
-        console.error("Failed to save DuplicateLink to Mongo:", err.message);
+  if (persist) {
+    // 4. Save duplicate candidates to Database
+    for (const cand of finalCandidates) {
+      let savedMongoLink = null;
+      if (isMongoAvailable()) {
+        try {
+          const link = await DuplicateLink.findOneAndUpdate(
+            { sourceId: questionText, targetId: cand.id },
+            { similarity: cand.similarity, explanation: cand.explanation, status: cand.similarity > 0.7 ? "confirmed" : "pending" },
+            { upsert: true, new: true }
+          );
+          savedMongoLink = link;
+        } catch (err) {
+          console.error("Failed to save DuplicateLink to Mongo:", err.message);
+        }
       }
-    }
 
-    try {
-      const sqliteMongoId = savedMongoLink ? String(savedMongoLink._id) : null;
-      await db.run(
-        `
-        INSERT INTO duplicate_links (mongo_id, source_id, target_id, similarity, explanation, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET similarity = excluded.similarity, explanation = excluded.explanation
-        `,
-        sqliteMongoId,
-        questionText,
-        cand.id,
-        cand.similarity,
-        cand.explanation,
-        cand.similarity > 0.7 ? "confirmed" : "pending"
-      );
-    } catch (err) {
-      console.error("Failed to save DuplicateLink to SQLite:", err.message);
+      try {
+        const sqliteMongoId = savedMongoLink ? String(savedMongoLink._id) : null;
+        await db.run(
+          `
+          INSERT INTO duplicate_links (mongo_id, source_id, target_id, similarity, explanation, status)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET similarity = excluded.similarity, explanation = excluded.explanation
+          `,
+          sqliteMongoId,
+          questionText,
+          cand.id,
+          cand.similarity,
+          cand.explanation,
+          cand.similarity > 0.7 ? "confirmed" : "pending"
+        );
+      } catch (err) {
+        console.error("Failed to save DuplicateLink to SQLite:", err.message);
+      }
     }
   }
 

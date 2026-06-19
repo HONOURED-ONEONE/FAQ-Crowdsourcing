@@ -1,8 +1,11 @@
 const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
 const { isMongoAvailable } = require("../db/mongo");
 const { getSQLiteDb } = require("../db/sqlite");
 const FAQ = require("../models/FAQ");
 const UserQuery = require("../models/UserQuery");
+const { formatFaqsForExport } = require("./aiService");
+const { checkDuplicates } = require("./duplicateDetectionService");
 
 function splitCSVRow(line) {
   const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(",");
@@ -213,6 +216,139 @@ async function importContent({ format, content, userId, authorName, dryRun = fal
   };
 }
 
+async function extractTextFromDocument({ fileBuffer, fileName }) {
+  const lower = String(fileName || "").toLowerCase();
+
+  if (lower.endsWith(".pdf")) {
+    const parsed = await pdfParse(fileBuffer);
+    return parsed.text;
+  }
+
+  if (lower.endsWith(".docx")) {
+    const result = await mammoth.extractRawText({ buffer: fileBuffer });
+    return result.value;
+  }
+
+  if (lower.endsWith(".txt")) {
+    return fileBuffer.toString("utf8");
+  }
+
+  throw new Error("Unsupported document format. Supported formats are PDF, DOCX, and TXT.");
+}
+
+async function generateFaqPreviewFromDocument({ fileBuffer, fileName, userId, authorName }) {
+  const extractedText = await extractTextFromDocument({ fileBuffer, fileName });
+
+  if (!extractedText || extractedText.trim() === "") {
+    throw new Error("Could not extract text from document");
+  }
+
+  let candidates = [];
+
+  if (process.env.NODE_ENV === "test" || !process.env.GEMINI_API_KEY) {
+    candidates = [
+      {
+        question: `Candidate FAQ from ${fileName}: Document Summary`,
+        answer: extractedText.substring(0, 800).trim(),
+        category: "General",
+        tags: []
+      }
+    ];
+  } else {
+    const { GoogleGenAI } = require("@google/genai");
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+    const prompt = `
+Extract FAQ question-answer pairs from the following document text.
+Return ONLY valid JSON. Do not include any markdown, code fences, or explanatory text.
+Each item must include:
+- "question": string
+- "answer": string
+- "category": string
+- "tags": ["string"]
+
+If a question is unclear, rewrite it to be clear and complete.
+Remove duplicate FAQs.
+Generate categories and tags when available.
+
+Document Text:
+${extractedText.substring(0, 10000)}
+`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      const clean = response.text.replace(/```json/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(clean);
+
+      if (!Array.isArray(parsed)) {
+        throw new Error("AI returned invalid FAQ candidate structure");
+      }
+
+      candidates = parsed.map((item) => ({
+        question: String(item.question || "").trim(),
+        answer: String(item.answer || "").trim(),
+        category: item.category ? String(item.category).trim() : "General",
+        tags: Array.isArray(item.tags) ? item.tags.map((t) => String(t).trim()).filter(Boolean) : []
+      }));
+    } catch (err) {
+      console.error("Gemini document FAQ extraction failed, fallback active:", err.message);
+      candidates = [
+        {
+          question: `Candidate FAQ from ${fileName}: Document Summary`,
+          answer: extractedText.substring(0, 800).trim(),
+          category: "General",
+          tags: []
+        }
+      ];
+    }
+  }
+
+  const previewItems = await Promise.all(candidates.map(async (item, index) => {
+    const validationErrors = [];
+    if (!item.question || item.question.length < 10) {
+      validationErrors.push("Question must be at least 10 characters long.");
+    }
+    if (!item.answer || item.answer.length < 5) {
+      validationErrors.push("Answer must be at least 5 characters long.");
+    }
+
+    const duplicates = item.question ? await checkDuplicates(item.question, { persist: false }) : [];
+
+    return {
+      id: `preview-${index + 1}`,
+      question: item.question,
+      answer: item.answer,
+      category: item.category || "General",
+      tags: item.tags || [],
+      validationErrors,
+      duplicateScores: duplicates
+    };
+  }));
+
+  return previewItems;
+}
+
+async function importFaqPreview({ faqs, userId, authorName }) {
+  const payload = JSON.stringify(faqs.map((item) => ({
+    question: item.question,
+    answer: item.answer,
+    category: item.category || "General",
+    tags: Array.isArray(item.tags) ? item.tags : []
+  })));
+
+  return importContent({
+    format: "json",
+    content: payload,
+    userId,
+    authorName,
+    dryRun: false
+  });
+}
+
 async function generateThreadFromDocument({ fileBuffer, fileName, userId, authorName }) {
   let parsedText = "";
 
@@ -353,5 +489,7 @@ ${parsedText.substring(0, 10000)}
 
 module.exports = {
   importContent,
+  generateFaqPreviewFromDocument,
+  importFaqPreview,
   generateThreadFromDocument
 };

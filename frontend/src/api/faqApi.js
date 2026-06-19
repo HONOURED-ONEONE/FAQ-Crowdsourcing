@@ -254,6 +254,37 @@ export async function fetchKnowledgeGaps() {
   return request("/admin/knowledge-gaps");
 }
 
+export async function previewFaqImport(fileName, fileContent) {
+  return request("/faqs/import/preview", {
+    method: "POST",
+    body: JSON.stringify({ fileName, fileContent })
+  });
+}
+
+export async function confirmFaqImport(faqs) {
+  return request("/faqs/import/confirm", {
+    method: "POST",
+    body: JSON.stringify({ faqs })
+  });
+}
+
+export async function downloadFaqExport(format, mode = "raw") {
+  const token = localStorage.getItem("crowdfaq-token");
+  const response = await fetch(`${API_BASE_URL}/export?format=${encodeURIComponent(format)}&mode=${encodeURIComponent(mode)}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Export failed with status ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  return blob;
+}
+
 export async function queryGraphQL(query, variables = {}) {
   return request("/graphql", {
     method: "POST",
